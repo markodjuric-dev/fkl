@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Izveštaji o radnom vremenu</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Izveštaji o radnom vremenu</h1>
+
+    <section class="card">
+      <h2>Svi radnici za jedan radni dan</h2>
+      <form id="daily-workers-form" class="form-row">
+        <label>
+          Datum
+          <input type="date" id="daily-date" required>
+        </label>
+        <button type="submit">Učitaj izveštaj</button>
+      </form>
+      <p id="daily-message" class="message"></p>
+      <div class="table-wrap">
+        <table id="daily-table">
+          <thead>
+            <tr>
+              <th>ID radnika</th>
+              <th>Ime radnika</th>
+              <th>Datum</th>
+              <th>ID poslova</th>
+              <th>Trajanje</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Jedan radnik u opsegu datuma</h2>
+      <form id="worker-range-form" class="form-row">
+        <label>
+          ID radnika
+          <input type="number" min="1" id="worker-id" required>
+        </label>
+        <label>
+          Od
+          <input type="date" id="range-from" required>
+        </label>
+        <label>
+          Do
+          <input type="date" id="range-to" required>
+        </label>
+        <button type="submit">Učitaj izveštaj</button>
+      </form>
+      <p id="range-message" class="message"></p>
+      <div class="table-wrap">
+        <table id="range-table">
+          <thead>
+            <tr>
+              <th>ID radnika</th>
+              <th>Ime radnika</th>
+              <th>Datum</th>
+              <th>ID poslova</th>
+              <th>Trajanje</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
