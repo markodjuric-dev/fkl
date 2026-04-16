@@ -1,5 +1,6 @@
 const API_URL = '../api/index.php';
 
+// Elements
 const dailyForm = document.querySelector('#daily-workers-form');
 const dailyDate = document.querySelector('#daily-date');
 const dailyTableBody = document.querySelector('#daily-table tbody');
@@ -12,105 +13,161 @@ const rangeTo = document.querySelector('#range-to');
 const rangeTableBody = document.querySelector('#range-table tbody');
 const rangeMessage = document.querySelector('#range-message');
 
+// State
+const availableDates = new Set();
+let availableMin = '';
+let availableMax = '';
+
+// Init
+void initAvailableDates();
+
+// -------------------- INIT --------------------
+
+async function initAvailableDates() {
+    const result = await fetchJson({route: 'available-dates'});
+
+    if (!result.ok || !Array.isArray(result.data) || result.data.length === 0) {
+        return;
+    }
+
+    result.data.forEach(d => availableDates.add(d));
+
+    availableMin = result.data[0];
+    availableMax = result.data[result.data.length - 1];
+
+    // Apply limits
+    [dailyDate, rangeFrom, rangeTo].forEach(input => {
+        input.min = availableMin;
+        input.max = availableMax;
+    });
+}
+
+// -------------------- EVENTS --------------------
+
+rangeFrom.addEventListener('change', () => {
+    rangeTo.min = rangeFrom.value || availableMin;
+});
+
+rangeTo.addEventListener('change', () => {
+    rangeFrom.max = rangeTo.value || availableMax;
+});
+
 dailyForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  dailyTableBody.innerHTML = '';
-  showMessage(dailyMessage, '');
+    event.preventDefault();
 
-  if (!dailyDate.value) {
-    showMessage(dailyMessage, 'Date is required.', true);
-    return;
-  }
+    dailyTableBody.innerHTML = '';
+    showMessage(dailyMessage, '');
 
-  const result = await fetchJson({
-    route: 'daily-workers',
-    date: dailyDate.value
-  });
-  if (!result.ok) {
-    showMessage(dailyMessage, result.error, true);
-    return;
-  }
+    if (!dailyDate.value) {
+        return showMessage(dailyMessage, 'Date is required.', true);
+    }
 
-  if (result.data.length === 0) {
-    showMessage(dailyMessage, 'No rows for selected date.');
-    return;
-  }
+    if (!isAllowedDate(dailyDate.value)) {
+        return showMessage(dailyMessage, 'Selected date is not available in data.', true);
+    }
 
-  dailyTableBody.innerHTML = toRowsHtml(result.data);
+    const result = await fetchJson({
+        route: 'daily-workers',
+        date: dailyDate.value
+    });
+
+    if (!result.ok) {
+        return showMessage(dailyMessage, result.error, true);
+    }
+
+    if (result.data.length === 0) {
+        return showMessage(dailyMessage, 'No rows for selected date.');
+    }
+
+    dailyTableBody.innerHTML = toRowsHtml(result.data);
 });
 
 rangeForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  rangeTableBody.innerHTML = '';
-  showMessage(rangeMessage, '');
+    event.preventDefault();
 
-  if (!workerId.value || Number(workerId.value) <= 0) {
-    showMessage(rangeMessage, 'Worker ID must be a positive number.', true);
-    return;
-  }
-  if (!rangeFrom.value || !rangeTo.value) {
-    showMessage(rangeMessage, 'Both dates are required.', true);
-    return;
-  }
-  if (rangeFrom.value > rangeTo.value) {
-    showMessage(rangeMessage, '"From" date must be before or equal to "To".', true);
-    return;
-  }
+    rangeTableBody.innerHTML = '';
+    showMessage(rangeMessage, '');
 
-  const result = await fetchJson({
-    route: 'worker-range',
-    worker_id: workerId.value,
-    from: rangeFrom.value,
-    to: rangeTo.value
-  });
-  if (!result.ok) {
-    showMessage(rangeMessage, result.error, true);
-    return;
-  }
-
-  if (result.data.length === 0) {
-    showMessage(rangeMessage, 'No rows in selected range.');
-    return;
-  }
-
-  rangeTableBody.innerHTML = toRowsHtml(result.data);
-});
-
-async function fetchJson(query) {
-  const params = new URLSearchParams(query);
-  try {
-    const httpResponse = await fetch(`${API_URL}?${params.toString()}`);
-    const payload = await httpResponse.json();
-
-    if (!httpResponse.ok || !payload.success) {
-      return {
-        ok: false,
-        data: [],
-        error: (payload.errors || ['Unknown error']).join(' | ')
-      };
+    if (!workerId.value || Number(workerId.value) <= 0) {
+        return showMessage(rangeMessage, 'Worker ID must be a positive number.', true);
     }
 
-    return { ok: true, data: payload.data, error: '' };
-  } catch (error) {
-    return { ok: false, data: [], error: `Request failed: ${error.message}` };
-  }
+    if (!rangeFrom.value || !rangeTo.value) {
+        return showMessage(rangeMessage, 'Both dates are required.', true);
+    }
+
+    if (rangeFrom.value > rangeTo.value) {
+        return showMessage(rangeMessage, '"From" date must be before or equal to "To".', true);
+    }
+
+    if (!isAllowedDate(rangeFrom.value) || !isAllowedDate(rangeTo.value)) {
+        return showMessage(rangeMessage, 'From/To must be selected from available dates.', true);
+    }
+
+    const result = await fetchJson({
+        route: 'worker-range',
+        worker_id: workerId.value,
+        from: rangeFrom.value,
+        to: rangeTo.value
+    });
+
+    if (!result.ok) {
+        return showMessage(rangeMessage, result.error, true);
+    }
+
+    if (result.data.length === 0) {
+        return showMessage(rangeMessage, 'No rows in selected range.');
+    }
+
+    rangeTableBody.innerHTML = toRowsHtml(result.data);
+});
+
+// -------------------- HELPERS --------------------
+
+function isAllowedDate(value) {
+    if (availableDates.size === 0) return true;
+    return availableDates.has(value);
+}
+
+async function fetchJson(query) {
+    const params = new URLSearchParams(query);
+
+    try {
+        const response = await fetch(`${API_URL}?${params}`);
+        const payload = await response.json();
+
+        if (!response.ok || !payload.success) {
+            return {
+                ok: false,
+                data: [],
+                error: (payload.errors || ['Unknown error']).join(' | ')
+            };
+        }
+
+        return {ok: true, data: payload.data, error: ''};
+
+    } catch (error) {
+        return {
+            ok: false,
+            data: [],
+            error: `Request failed: ${error.message}`
+        };
+    }
 }
 
 function toRowsHtml(rows) {
-  return rows
-    .map((row) => `
-      <tr>
-        <td>${row.worker_id}</td>
-        <td>${row.worker_name || '-'}</td>
-        <td>${row.date}</td>
-        <td>${(row.job_ids || []).join(', ') || '-'}</td>
-        <td>${row.duration}</td>
-      </tr>
-    `)
-    .join('');
+    return rows.map(row => `
+        <tr>
+            <td>${row.worker_id}</td>
+            <td>${row.worker_name || '-'}</td>
+            <td>${row.date}</td>
+            <td>${(row.job_ids || []).join(', ') || '-'}</td>
+            <td>${row.duration}</td>
+        </tr>
+    `).join('');
 }
 
 function showMessage(el, text, isError = false) {
-  el.textContent = text;
-  el.classList.toggle('error', isError);
+    el.textContent = text;
+    el.classList.toggle('error', isError);
 }

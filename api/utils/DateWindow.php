@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+namespace utils;
+
+use DateTimeImmutable;
+
 final class DateWindow
 {
     public static function logicalWorkdayForStart(DateTimeImmutable $start): string
     {
-        if ((int) $start->format('H') < 6) {
+        if ((int)$start->format('H') < 6) {
             $start = $start->modify('-1 day');
         }
 
