@@ -8,9 +8,11 @@ use DateTimeImmutable;
 
 final class DateWindow
 {
+    private const int DAY_START_HOUR = 6;
+
     public static function logicalWorkdayForStart(DateTimeImmutable $start): string
     {
-        if ((int)$start->format('H') < 6) {
+        if ((int)$start->format('H') < self::DAY_START_HOUR) {
             $start = $start->modify('-1 day');
         }
 
@@ -19,13 +21,12 @@ final class DateWindow
 
     public static function queryBounds(string $from, string $to): array
     {
-        $fromDate = new DateTimeImmutable($from . ' 00:00:00');
-        $toDate = new DateTimeImmutable($to . ' 23:59:59');
+        $fromDate = new DateTimeImmutable($from);
+        $toDate = new DateTimeImmutable($to);
 
-        // Includes early-hours rows that belong to previous logical day.
-        $lower = $fromDate->modify('-1 day')->format('Y-m-d H:i:s');
-        $upper = $toDate->modify('+1 day')->format('Y-m-d H:i:s');
+        $start = $fromDate->modify('-1 day')->format('Y-m-d H:i:s');
+        $end = $toDate->modify('+1 day')->format('Y-m-d H:i:s');
 
-        return [$lower, $upper];
+        return [$start, $end];
     }
 }

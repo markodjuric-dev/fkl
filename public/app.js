@@ -13,7 +13,6 @@ const rangeTo = document.querySelector('#range-to');
 const rangeTableBody = document.querySelector('#range-table tbody');
 const rangeMessage = document.querySelector('#range-message');
 
-// State
 const availableDates = new Set();
 let availableMin = '';
 let availableMax = '';
@@ -88,8 +87,8 @@ rangeForm.addEventListener('submit', async (event) => {
     rangeTableBody.innerHTML = '';
     showMessage(rangeMessage, '');
 
-    if (!workerId.value || Number(workerId.value) <= 0) {
-        return showMessage(rangeMessage, 'Worker ID must be a positive number.', true);
+    if (!workerId.value.trim()) {
+        return showMessage(rangeMessage, 'Worker ID is required.', true);
     }
 
     if (!rangeFrom.value || !rangeTo.value) {
@@ -106,7 +105,7 @@ rangeForm.addEventListener('submit', async (event) => {
 
     const result = await fetchJson({
         route: 'worker-range',
-        worker_id: workerId.value,
+        worker_id: workerId.value.padStart(4, '0'),
         from: rangeFrom.value,
         to: rangeTo.value
     });

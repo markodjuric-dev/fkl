@@ -10,7 +10,7 @@ readonly class WorkTimeRepository
     {
     }
 
-    public function fetchEvents(string $lowerBound, string $upperBound): array
+    public function findActivities(string $start, string $end): array
     {
         $sql = <<<'SQL'
         SELECT
@@ -21,21 +21,52 @@ readonly class WorkTimeRepository
             datum,
             vreme
         FROM test_log_r
-        WHERE CONCAT(datum, ' ', vreme) BETWEEN :lower_bound AND :upper_bound
+        WHERE datum BETWEEN DATE(:start) AND DATE(:end)
         AND id_aktivnosti IN (2, 3, 6)
         ORDER BY datum, vreme, id_posla, id_radnika
         SQL;
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
-            'lower_bound' => $lowerBound,
-            'upper_bound' => $upperBound,
+            'start' => $start,
+            'end' => $end,
         ]);
 
-        return $stmt->fetchAll() ?: [];
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
-    public function availableDates(): array
+    public function fetchActivityByWorkerAndRange(string $workerId, string $start, string $end): array
+    {
+        $sql = <<<'SQL'
+        SELECT 
+            id_posla,
+            id_radnika,
+            ime_radnika,
+            id_aktivnosti,
+            datum,
+            vreme
+        FROM test_log_r
+        WHERE id_posla IN (
+            SELECT DISTINCT id_posla 
+            FROM test_log_r 
+            WHERE id_radnika = :worker_id 
+              AND datum BETWEEN DATE(:start) AND DATE(:end)
+        )
+        AND id_aktivnosti IN (2, 3, 6)
+        ORDER BY id_posla ASC, datum ASC, vreme ASC, id ASC
+        SQL;
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            'worker_id' => $workerId,
+            'start' => $start,
+            'end' => $end,
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    public function fetchAvailableWorkDates(): array
     {
         $sql = <<<'SQL'
         SELECT DISTINCT
@@ -47,11 +78,6 @@ readonly class WorkTimeRepository
         ORDER BY work_date
         SQL;
 
-        $stmt = $this->pdo->query($sql);
-        $rows = $stmt->fetchAll() ?: [];
-        return array_values(array_filter(array_map(
-            static fn(array $row): string => (string)($row['work_date'] ?? ''),
-            $rows
-        )));
+        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN) ?: [];
     }
 }
