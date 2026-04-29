@@ -49,7 +49,7 @@ function db(): PDO
     loadEnv(__DIR__ . '/../.env');
 
     $host = getenv('DB_HOST') ?: '127.0.0.1';
-    $port = getenv('DB_PORT') ?: '3306';
+    $port = getenv('DB_PORT') ?: '3307';
     $name = getenv('DB_NAME') ?: '';
     $user = getenv('DB_USER') ?: '';
     $pass = getenv('DB_PASS') ?: '';
